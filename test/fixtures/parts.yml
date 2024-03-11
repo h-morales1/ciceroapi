@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  date_of_change: 2024-03-10
+  price: 9.99
+  store_url: MyString
+  tutorial_url: MyString
+  note: MyString
+  car: one
+
+two:
+  name: MyString
+  date_of_change: 2024-03-10
+  price: 9.99
+  store_url: MyString
+  tutorial_url: MyString
+  note: MyString
+  car: two
