@@ -1,14 +1,11 @@
-# syntax = docker/dockerfile:1
-
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
 ARG RUBY_VERSION=3.1.0
-FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim as base
 
-# Rails app lives here
-WORKDIR /rails
+FROM registry.docker.com/library/ruby:$RUBY_VERSION-alpine as base
 
-# Set production environment
-ENV RAILS_ENV="production" \
+WORKDIR /rails 
+
+# prod environment
+ENV RAILS_ENV="development" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development"
@@ -17,11 +14,23 @@ ENV RAILS_ENV="production" \
 # Throw-away build stage to reduce size of final image
 FROM base as build
 
-# Install packages needed to build gems
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libvips pkg-config
+RUN apk add --update --no-cache \
+    build-base \
+    curl \
+    git \
+    less \
+    vips-dev\
+    postgresql-client\
+    yarn\
+    postgresql-dev\
+    libpq\
+    libpq-dev\
+    tzdata\
+    gcompat\
+    libstdc++
 
-# Install application gems
+
+#Install application gems
 COPY Gemfile Gemfile.lock ./
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
@@ -37,22 +46,32 @@ RUN bundle exec bootsnap precompile app/ lib/
 # Final stage for app image
 FROM base
 
-# Install packages needed for deployment
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libvips postgresql-client && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+RUN apk add --update --no-cache \
+    build-base \
+    curl \
+    git \
+    less \
+    vips-dev\
+    postgresql-client\
+    yarn\
+    postgresql-dev\
+    libpq\
+    libpq-dev\
+    tzdata\
+    gcompat\
+    libstdc++
 
 # Copy built artifacts: gems, application
 COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build /rails /rails
 
 # Run and own only the runtime files as a non-root user for security
-RUN useradd rails --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
-USER rails:rails
-
-# Entrypoint prepares the database.
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+#RUN adduser rails && \
+#    chown -R rails:rails db log storage tmp
+#USER rails:rails
+COPY entrypoint.sh /usr/bin/
+RUN chmod +x /usr/bin/entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
 
 # Start the server by default, this can be overwritten at runtime
 EXPOSE 3000
